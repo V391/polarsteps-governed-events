@@ -1,0 +1,7 @@
+polarsteps_foundation:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "../warehouse/polarsteps.duckdb"
+      threads: 4

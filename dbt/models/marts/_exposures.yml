@@ -1,0 +1,26 @@
+version: 2
+
+# Dashboard ownership lives next to the models it reads. dbt ls --select +exposure:investor_kpi_board
+# shows everything a schema change would break.
+
+exposures:
+  - name: investor_kpi_board
+    label: Investor KPI board (Metabase)
+    type: dashboard
+    maturity: high
+    owner: {name: Head of Growth}
+    depends_on: [ref('dim_travelers'), ref('fct_trips'), ref('fct_retention_weekly')]
+
+  - name: paid_channel_review
+    label: Weekly paid channel review (Metabase)
+    type: dashboard
+    maturity: medium
+    owner: {name: Performance marketing lead}
+    depends_on: [ref('fct_channel_performance')]
+
+  - name: claude_analyst
+    label: Claude analyst over governed marts (src/ask.py)
+    type: application
+    maturity: low
+    owner: {name: Data and Analytics Engineering}
+    depends_on: [ref('dim_travelers'), ref('fct_trips'), ref('fct_retention_weekly'), ref('fct_channel_performance')]

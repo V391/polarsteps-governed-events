@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: governed
+    description: Output of the tracking plan gate (src/gate.py). Nothing upstream of the gate is readable by dbt.
+    meta:
+      external_location: "../data/governed/{name}.parquet"
+    tables:
+      - name: events
+        description: Accepted app events, pseudonymized, properties as JSON.
+        columns:
+          - name: event_id
+            tests: [unique, not_null]
+          - name: user_key
+            tests: [not_null]
+      - name: quarantine
+        description: Rejected events with reason. Redacted payload, kept for fix and replay.
+      - name: gate_log
+        description: Audit trail of every repair, redaction and drop.
+      - name: installs
+        description: AppsFlyer install report, ids pseudonymized.
+      - name: skan_postbacks
+        description: Aggregated SKAdNetwork postbacks for iOS installs without ATT consent.
+      - name: ad_spend
+        description: Daily spend per network and campaign.

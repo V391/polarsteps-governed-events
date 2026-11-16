@@ -1,0 +1,34 @@
+name: data ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tracking-plan:
+    # Breaking or privacy relevant tracking plan changes fail the PR until reviewed (and Legal signs off on privacy_review).
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pyyaml
+      - run: git show origin/${{ github.base_ref }}:tracking_plan/tracking_plan.yml > /tmp/base_plan.yml
+      - run: python src/plan_diff.py /tmp/base_plan.yml tracking_plan/tracking_plan.yml
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PSEUDO_KEY: ${{ secrets.PSEUDO_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements.txt
+      - run: python run_all.py
+      - run: pytest -q
+      - uses: actions/upload-artifact@v4
+        with: {name: health-report, path: reports/}

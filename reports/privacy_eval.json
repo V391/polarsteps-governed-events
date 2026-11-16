@@ -1,0 +1,23 @@
+{
+  "travelers": 7411,
+  "home_found_within_1km_pct": {
+    "raw": {
+      "most_visited": 79.6,
+      "first_step": 79.9,
+      "either": 82.8
+    },
+    "governed": {
+      "most_visited": 0.0,
+      "first_step": 0.0,
+      "either": 0.0
+    }
+  },
+  "steps_location_suppressed_pct": 20.8,
+  "trip_distance_error_pct": {
+    "median": 0.28,
+    "p95": 1.07,
+    "trips": 8585
+  },
+  "step_and_country_counts": "unchanged: suppressed steps keep their row and country_code, only coordinates are removed",
+  "mixpanel_export_location": "country_code only"
+}

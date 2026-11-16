@@ -1,0 +1,80 @@
+version: 2
+
+# Contracts: dim_travelers and fct_trips feed the investor KPI board, so their columns and types
+# are enforced. A model change that drops or retypes a column fails the build instead of a dashboard.
+
+models:
+  - name: dim_travelers
+    description: One row per signed up traveler. Pseudonymous key, no contact details.
+    meta: {owner: growth, tier: 1}
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: user_key
+        data_type: varchar
+        description: HMAC of the app user id. Joins across all marts; not reversible without the gate key.
+        constraints: [{type: not_null}]
+        tests: [unique]
+      - {name: signed_up_at, data_type: timestamp}
+      - name: signup_method
+        data_type: varchar
+        tests: [{accepted_values: {arguments: {values: [email, apple, google, facebook]}}}]
+      - {name: platform, data_type: varchar, tests: [{accepted_values: {arguments: {values: [ios, android]}}}]}
+      - {name: geo_country, data_type: varchar, description: Country from IP at signup. IP itself is never stored.}
+      - {name: marketing_consent, data_type: boolean}
+      - {name: installed_at, data_type: timestamp}
+      - {name: reported_channel, data_type: varchar, description: "AppsFlyer media source as reported. iOS without ATT shows as organic; see fct_channel_performance."}
+      - {name: campaign, data_type: varchar}
+      - {name: att_status, data_type: varchar}
+      - {name: first_trip_at, data_type: timestamp}
+      - {name: first_step_at, data_type: timestamp}
+      - {name: activated_7d, data_type: boolean, description: Created a trip and added a step within 7 days of signup.}
+
+  - name: fct_trips
+    description: One row per trip with steps, countries, photos, shares and Travel Book revenue.
+    meta: {owner: trips, tier: 1}
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: trip_id
+        data_type: varchar
+        constraints: [{type: not_null}]
+        tests: [unique]
+      - name: user_key
+        data_type: varchar
+        tests: [{relationships: {arguments: {to: ref('dim_travelers'), field: user_key}}}]
+      - {name: platform, data_type: varchar}
+      - {name: created_at, data_type: timestamp}
+      - {name: planned_duration_days, data_type: integer}
+      - {name: is_public, data_type: boolean}
+      - {name: n_steps, data_type: bigint}
+      - {name: n_countries, data_type: bigint}
+      - {name: n_steps_with_photo, data_type: bigint}
+      - {name: first_step_at, data_type: timestamp}
+      - {name: last_step_at, data_type: timestamp}
+      - {name: in_destination_km, data_type: double, description: Distance between steps outside home zones, on the 1 km grid.}
+      - {name: n_photos, data_type: bigint}
+      - {name: n_shares, data_type: bigint}
+      - {name: has_travel_book, data_type: boolean}
+      - {name: book_revenue_eur, data_type: "decimal(12,2)"}
+
+  - name: fct_retention_weekly
+    description: Weekly retention by signup cohort, weeks 0 to 12.
+    meta: {owner: growth, tier: 2}
+    tests:
+      - unique_combination:
+          arguments:
+            columns: [cohort_week, week_number]
+    columns:
+      - {name: retention_rate, tests: [not_null]}
+
+  - name: fct_channel_performance
+    description: Month x platform x channel spend, installs, signups and CPI, with SKAN installs moved from iOS organic back to their paid channel.
+    meta: {owner: growth, tier: 1}
+    tests:
+      - unique_combination:
+          arguments:
+            columns: [month, platform, channel]
+    columns:
+      - {name: channel, tests: [not_null]}
+      - {name: installs_total, tests: [not_null]}

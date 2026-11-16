@@ -1,0 +1,90 @@
+# PR from the iOS team: declare the ai_caption property that 7.3.0 already sends.
+# Polarsteps tracking plan (as code).
+# Every app event must match an entry here before it reaches the warehouse,
+# Mixpanel or an ad platform. Changes go through a PR; src/plan_diff.py
+# classifies them as additive or breaking in CI.
+#
+# pii classes
+#   none        safe everywhere
+#   identifier  pseudonymized with a keyed HMAC before storage, never sent raw
+#   direct      dropped from the warehouse and Mixpanel (email, phone, IP)
+#   free_text   kept, but scanned and redacted for emails and phone numbers
+#   location    precise coordinates: home zones suppressed, rest rounded to ~1 km;
+#               never leaves the warehouse
+#
+# destinations: warehouse, mixpanel, ad_platforms
+
+version: 8
+naming: "snake_case object_action, past tense (trip_created, not TripCreated)"
+
+context:
+  event_id:    {type: string, required: true,  pii: none}
+  user_id:     {type: string, required: true,  pii: identifier}
+  device_id:   {type: string, required: true,  pii: identifier}
+  ip:          {type: string, required: false, pii: direct}
+  platform:    {type: string, required: true,  pii: none, enum: [ios, android]}
+  app_version: {type: string, required: true,  pii: none}
+  event_ts:    {type: timestamp, required: true, pii: none}
+
+events:
+  user_signed_up:
+    owner: growth
+    description: Account created after install.
+    destinations: [warehouse, mixpanel, ad_platforms]
+    properties:
+      signup_method:     {type: string, required: true, pii: none, enum: [email, apple, google, facebook], normalize: lower}
+      email:             {type: string, required: true, pii: direct}
+      marketing_consent: {type: boolean, required: true, pii: none}
+      referrer_code:     {type: string, required: false, pii: none}
+
+  trip_created:
+    owner: trips
+    description: Traveler starts a new trip.
+    aliases: [TripCreated]          # Android < 5.10 still sends the old name
+    destinations: [warehouse, mixpanel]
+    properties:
+      trip_id:               {type: string,  required: true,  pii: none}
+      planned_duration_days: {type: integer, required: false, pii: none}
+      is_public:             {type: boolean, required: true,  pii: none}
+      trip_name:             {type: string,  required: false, pii: free_text}
+
+  step_added:
+    owner: trips
+    description: A location step is added to a trip (auto tracked or manual).
+    destinations: [warehouse, mixpanel]
+    properties:
+      trip_id:      {type: string,  required: true,  pii: none}
+      step_id:      {type: string,  required: true,  pii: none}
+      lat:          {type: number,  required: true,  pii: location}
+      lon:          {type: number,  required: true,  pii: location}
+      country_code: {type: string,  required: true,  pii: none}
+      has_photo:    {type: boolean, required: true,  pii: none}
+      step_text:    {type: string,  required: false, pii: free_text}
+      ai_caption:   {type: string,  required: false, pii: free_text}   # iOS 7.3 AI captions
+
+  photo_uploaded:
+    owner: trips
+    description: Photos attached to a step.
+    destinations: [warehouse, mixpanel]
+    properties:
+      trip_id:     {type: string,  required: true, pii: none}
+      step_id:     {type: string,  required: true, pii: none}
+      photo_count: {type: integer, required: true, pii: none}
+
+  trip_shared:
+    owner: growth
+    description: Trip link shared outside the app (word of mouth loop).
+    destinations: [warehouse, mixpanel]
+    properties:
+      trip_id: {type: string, required: true, pii: none}
+      channel: {type: string, required: true, pii: none, enum: [whatsapp, instagram, link, email]}
+
+  travel_book_ordered:
+    owner: commerce
+    description: Printed Travel Book purchased.
+    destinations: [warehouse, mixpanel, ad_platforms]
+    properties:
+      book_id:  {type: string,  required: true, pii: none}
+      trip_id:  {type: string,  required: true, pii: none}
+      price_eur: {type: number, required: true, pii: none}
+      pages:    {type: integer, required: true, pii: none}

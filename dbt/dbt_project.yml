@@ -1,0 +1,19 @@
+name: polarsteps_foundation
+version: "1.0.0"
+profile: polarsteps_foundation
+config-version: 2
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  polarsteps_foundation:
+    staging:
+      +materialized: table   # DuckDB stand in: tables so the warehouse file is self contained
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
